@@ -8,10 +8,10 @@ class LunarLanderCurriculumWrapper(gym.Wrapper):
     """
     def __init__(self, env, stage='easy'):
         super().__init__(env)
-        self.stage = stage
-        self.original_gravity = env.unwrapped.gravity
+        self.stage = stage # discrete difficulty level easy/medium/hard, fixed value per stage
+        self.original_gravity = env.unwrapped.gravity # Store original environment parameter
         self.original_wind_power = env.unwrapped.wind_power
-        self.configure_environment()
+        self.configure_environment() # Apply preset condiguration
         
     def configure_environment(self):
         """Adjust environment parameters based on current stage"""
