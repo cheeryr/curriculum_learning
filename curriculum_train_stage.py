@@ -3,7 +3,7 @@ import numpy as np
 from stable_baselines3 import PPO
 from stable_baselines3.common.callbacks import BaseCallback
 from stable_baselines3.common.monitor import Monitor
-from env_wrappers import LunarLanderCurriculumWrapper
+from wrappers import LunarLanderCurriculumWrapper
 import gymnasium as gym
 
 class ProgressLogger(BaseCallback):
@@ -27,7 +27,8 @@ def make_env(stage='easy'):
     """Create and wrap the environment"""
     env = gym.make("LunarLander-v2", continuous=True)
     env = Monitor(env)  # For tracking episode stats
-    env = LunarLanderCurriculumWrapper(env, stage=stage)
+    #env = LunarLanderCurriculumWrapper(env, stage=stage)
+    env = AdaptiveCurriculumWrapper(env)
     return env
 
 def train_curriculum(total_timesteps=1_000_000):
