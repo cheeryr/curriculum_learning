@@ -25,10 +25,10 @@ class ProgressLogger(BaseCallback):
 
 def make_env(stage='easy'):
     """Create and wrap the environment"""
-    env = gym.make("LunarLander-v2", continuous=True)
+    env = gym.make("LunarLander-v3", continuous=True)
     env = Monitor(env)  # For tracking episode stats
-    #env = LunarLanderCurriculumWrapper(env, stage=stage)
-    env = AdaptiveCurriculumWrapper(env)
+    env = LunarLanderCurriculumWrapper(env, stage=stage)
+    #env = AdaptiveCurriculumWrapper(env)
     return env
 
 def train_curriculum(total_timesteps=1_000_000):
@@ -97,4 +97,4 @@ if __name__ == "__main__":
     
     # Start training
     model = train_curriculum()
-    model.save("models/ppo_lunar_lander_final")
+    model.save("models/ppo_lunar_lander_stage")

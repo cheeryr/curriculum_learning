@@ -5,7 +5,7 @@ import gymnasium as gym
 
 def train_baseline(total_timesteps=1_000_000):
     """Train without curriculum learning"""
-    env = gym.make("LunarLander-v2", continuous=True)
+    env = gym.make("LunarLander-v3", continuous=True)
     env = Monitor(env)
     
     model = PPO(
