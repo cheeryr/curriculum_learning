@@ -33,9 +33,8 @@ def make_env(stage='easy'):
 
 def train_curriculum(total_timesteps=1_000_000):
     """Train with curriculum learning"""
-    # Modify your curriculum stages in curriculum_train.py:
     curriculum = [
-        {'stage': 'easy', 'threshold': 150, 'min_steps': 50_000, 'max_steps': 150_000},# reduce time in easy stage
+        {'stage': 'easy', 'threshold': 150, 'min_steps': 50_000, 'max_steps': 150_000},# set max_steps to prevent infinite stuck in one stage if training is under performance
         {'stage': 'medium', 'threshold': 180, 'min_steps': 100_000, 'max_steps': 300_000}, # progressive threshold
         {'stage': 'hard', 'threshold': 220, 'min_steps': 200_000} # faster transition to hard stage
     ]

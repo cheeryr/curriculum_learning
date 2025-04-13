@@ -1,8 +1,10 @@
 # wrappers/__init__.py
-from .stage_based import LunarLanderCurriculumWrapper  # Your original wrapper
-from .adaptive import AdaptiveCurriculumWrapper        # New adaptive wrapper
+from .stage_based import LunarLanderCurriculumWrapper  # stage based  wrapper
+from .adaptive_reward import AdaptiveRewardCurriculumWrapper  # adaptive reward wrapper
+from .adaptive_entropy import AdaptiveEntropyCurriculumWrapper  #
 
 __all__ = [
     'LunarLanderCurriculumWrapper',# stage based
-    'AdaptiveCurriculumWrapper'#adaptive
+    'AdaptiveRewardCurriculumWrapper',#adaptive_reward
+    'AdaptiveEntropyCurriculumWrapper'#adaptive_entropy
 ]

@@ -1,7 +1,7 @@
 import numpy as np
 import gymnasium as gym
 
-class AdaptiveCurriculumWrapper(gym.Wrapper):
+class AdaptiveRewardCurriculumWrapper(gym.Wrapper):
     def __init__(self, env):
         super().__init__(env)
         self.original_gravity = env.unwrapped.gravity  # Default: -10

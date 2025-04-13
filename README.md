@@ -1,3 +1,4 @@
 python baseline_train.py
-python curriculum_train.py
+python curriculum_train_stage.py
+python curriculum_train_adaptive.py
 python evaluate.py
