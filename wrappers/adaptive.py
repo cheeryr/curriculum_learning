@@ -4,43 +4,66 @@ import gymnasium as gym
 class AdaptiveCurriculumWrapper(gym.Wrapper):
     def __init__(self, env):
         super().__init__(env)
-        self.original_gravity = env.unwrapped.gravity
-        self.original_wind = env.unwrapped.wind_power
-        self.difficulty = 0.3  # Start easy (30%)
+        self.original_gravity = env.unwrapped.gravity  # Default: -10
+        self.original_wind = env.unwrapped.wind_power  # Default: 15
         
-        # Boundaries
-        self.min_difficulty = 0.1
-        self.max_difficulty = 1.5
-
-        self.difficulty_history = []
-        self.reward_history = []
-        
+        # Very conservative starting point
+        self.current_gravity_scale = 0.5  # 50% gravity
+        self.current_wind_scale = 0.0     # No wind
         self._update_physics()
-    
+        
+        # Tracking
+        self.baseline_performance = None
+        self.consecutive_good = 0
+        self.consecutive_bad = 0
+        self.min_reward = -200  # Prevent catastrophic failure
+
     def _update_physics(self):
-        """Apply current difficulty settings"""
-        # Linear gravity scaling
-        self.env.unwrapped.gravity = self.original_gravity * self.difficulty
-        
-        # Sub-linear wind scaling (gentler early)
-        wind_scale = np.clip(self.difficulty**0.7, 0, 2)
-        self.env.unwrapped.wind_power = self.original_wind * wind_scale
-    
-    def adjust_difficulty(self, avg_reward):
-        """
-        Auto-adjust based on performance
-        Args:
-            avg_reward: Rolling average reward
-        """
-        if avg_reward > 200:  # Increase if doing well
-            self.difficulty = min(self.difficulty + 0.03, self.max_difficulty)
-        elif avg_reward < 150:  # Decrease if struggling
-            self.difficulty = max(self.difficulty - 0.02, self.min_difficulty)
-        
-        self._update_physics()
-        return self.difficulty
+        """Safely update environment physics"""
+        self.env.unwrapped.gravity = self.original_gravity * max(0.3, min(1.0, self.current_gravity_scale))
+        self.env.unwrapped.wind_power = self.original_wind * max(0.0, min(1.0, self.current_wind_scale))
 
-    def step(self, action):
-        obs, reward, terminated, truncated, info = self.env.step(action)
-        self.reward_history.append(reward)
-        return obs, reward, terminated, truncated, info
+    def adjust_difficulty(self, avg_reward):
+        """Very cautious difficulty adjustment"""
+        if self.baseline_performance is None:
+            self.baseline_performance = max(self.min_reward, avg_reward)
+            return False
+            
+        # Clip reward to prevent extreme values
+        clipped_reward = max(self.min_reward, avg_reward)
+        
+        # Update baseline slowly
+        self.baseline_performance = 0.9 * self.baseline_performance + 0.1 * clipped_reward
+        
+        # Only adjust if we have consistent performance
+        if clipped_reward > max(150, self.baseline_performance * 1.1):
+            self.consecutive_good += 1
+            self.consecutive_bad = 0
+        elif clipped_reward < max(100, self.baseline_performance * 0.9):
+            self.consecutive_bad += 1
+            self.consecutive_good = 0
+        else:
+            self.consecutive_good = 0
+            self.consecutive_bad = 0
+            
+        changed = False
+        
+        # Very gradual increases
+        if self.consecutive_good >= 100:  # Require long streaks
+            self.current_gravity_scale = min(1.0, self.current_gravity_scale + 0.02)
+            if self.current_gravity_scale > 0.7:  # Only introduce wind late
+                self.current_wind_scale = min(1.0, self.current_wind_scale + 0.01)
+            self._update_physics()
+            self.consecutive_good = 0
+            changed = True
+        elif self.consecutive_bad >= 50:  # Quick to reduce difficulty
+            self.current_gravity_scale = max(0.4, self.current_gravity_scale - 0.03)
+            self.current_wind_scale = max(0.0, self.current_wind_scale - 0.02)
+            self._update_physics()
+            self.consecutive_bad = 0
+            changed = True
+            
+        return changed
+
+    def reset(self, **kwargs):
+        return self.env.reset(**kwargs)

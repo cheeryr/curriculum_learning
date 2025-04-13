@@ -1,51 +1,79 @@
 import os
 import numpy as np
 from stable_baselines3 import PPO
-from stable_baselines3.common.callbacks import BaseCallback
 from stable_baselines3.common.monitor import Monitor
+from stable_baselines3.common.callbacks import BaseCallback
 from wrappers.adaptive import AdaptiveCurriculumWrapper
 import gymnasium as gym
 
-class AdaptiveProgressLogger(BaseCallback):
+class AdaptiveCurriculumCallback(BaseCallback):
     def __init__(self, verbose=0):
         super().__init__(verbose)
         self.episode_rewards = []
-        self.difficulty_history = []
-    
+        self.last_log = 0
+
     def _on_step(self) -> bool:
         if 'episode' in self.locals:
             self.episode_rewards.append(self.locals['episode']['r'])
-            # Get current difficulty from wrapper
-            wrapper = self.training_env.envs[0].env
-            if isinstance(wrapper, AdaptiveCurriculumWrapper):
-                self.difficulty_history.append(wrapper.current_difficulty)
         return True
 
-def make_adaptive_env():
-    env = gym.make("LunarLander-v2", continuous=True)
+    def _on_rollout_end(self):
+        if len(self.episode_rewards) < 50:
+            return
+            
+        avg_reward = np.mean(self.episode_rewards[-50:])
+        wrapper = self.training_env.envs[0].env
+        
+        difficulty_changed = wrapper.adjust_difficulty(avg_reward)
+        
+        if self.num_timesteps - self.last_log > 20000 or difficulty_changed:
+            print(f"\nStep {self.num_timesteps:,}")
+            print(f"Last 50 Avg Reward: {avg_reward:.1f}")
+            print(f"Gravity: {wrapper.env.unwrapped.gravity:.2f} (scale: {wrapper.current_gravity_scale:.2f})")
+            print(f"Wind: {wrapper.env.unwrapped.wind_power:.2f} (scale: {wrapper.current_wind_scale:.2f})")
+            if wrapper.baseline_performance:
+                print(f"Baseline: {wrapper.baseline_performance:.1f}")
+            self.last_log = self.num_timesteps
+
+def make_env():
+    env = gym.make("LunarLander-v3", continuous=True)
     env = Monitor(env)
     env = AdaptiveCurriculumWrapper(env)
     return env
 
-def train_adaptive(total_timesteps=1_000_000):
-    """Training with automatic difficulty adjustment"""
-    env = make_adaptive_env()
-    model = PPO("MlpPolicy", env, verbose=1, tensorboard_log="./tensorboard/")
-    callback = AdaptiveProgressLogger()
+def train_adaptive():
+    os.makedirs("models", exist_ok=True)
+    os.makedirs("tensorboard", exist_ok=True)
     
-    # Training loop with periodic logging
-    for _ in range(total_timesteps // 2048):
-        model.learn(total_timesteps=2048, callback=callback)
-        
-        # Auto-adjust difficulty
-        if len(callback.episode_rewards) > 50:
-            avg_reward = np.mean(callback.episode_rewards[-50:])
-            env.adjust_difficulty(avg_reward)
-            print(f"Difficulty: {env.current_difficulty:.1%} | Avg Reward: {avg_reward:.1f}")
+    env = make_env()
+    model = PPO(
+        "MlpPolicy",
+        env,
+        learning_rate=2e-4,
+        n_steps=2048,
+        batch_size=64,
+        n_epochs=10,
+        gamma=0.99,
+        gae_lambda=0.95,
+        clip_range=0.2,
+        ent_coef=0.02,
+        max_grad_norm=0.5,
+        verbose=1,
+        tensorboard_log="./tensorboard/"
+    )
     
-    model.save("models/ppo_lunar_adaptive")
-    return model
+    print("\n=== Starting Adaptive Curriculum Training ===")
+    print(f"Initial Gravity: {env.env.unwrapped.gravity:.2f} (50% of normal)")
+    print(f"Initial Wind: {env.env.unwrapped.wind_power:.2f} (0% of normal)\n")
+    
+    model.learn(
+        total_timesteps=3_000_000,
+        callback=AdaptiveCurriculumCallback(),
+        progress_bar=True
+    )
+    
+    model.save("models/ppo_lunar_lander_adaptive")
+    print("\nTraining complete!")
 
 if __name__ == "__main__":
-    os.makedirs("models", exist_ok=True)
     train_adaptive()

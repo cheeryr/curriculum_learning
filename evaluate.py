@@ -108,6 +108,7 @@ if __name__ == "__main__":
     models_to_evaluate = {
         'baseline': 'models/ppo_lunar_lander_baseline',
         'stage': 'models/ppo_lunar_lander_stage',
+        'adaptive': 'models/ppo_lunar_lander_adaptive',
         'final': 'models/ppo_lunar_lander_final'
     }
     
