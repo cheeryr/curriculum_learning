@@ -100,11 +100,11 @@ def evaluate_randomized(model_path, num_episodes=100):
     return metrics
 
 def plot_comparison(results, title_suffix=""):
-    """Generate comparison plots with curriculum progression"""
+    """Generate comparison plots"""
     plt.figure(figsize=(20, 5))
     
     # Reward distribution
-    plt.subplot(1, 3, 1)
+    plt.subplot(1, 2, 1)
     for model_name, data in results.items():
         if 'episode_rewards' in data:  # Only plot if we have data
             label = model_name.replace('ppo_lunar_lander_', '').capitalize()
@@ -118,7 +118,7 @@ def plot_comparison(results, title_suffix=""):
         plt.grid()
     
     # Success rate comparison
-    plt.subplot(1, 3, 2)
+    plt.subplot(1, 2, 2)
     model_names = []
     success_rates = []
     for model_name, data in results.items():
@@ -133,39 +133,39 @@ def plot_comparison(results, title_suffix=""):
         plt.ylim(0, 100)
         plt.grid()
     
-    # Curriculum progression analysis (only for curriculum models)
-    plt.subplot(1, 3, 3)
-    stages = ['easy', 'medium', 'hard']
+    # # Curriculum progression analysis (only for curriculum models)
+    # plt.subplot(1, 3, 3)
+    # stages = ['easy', 'medium', 'hard']
     
-    # Check if we have a curriculum model in results
-    curriculum_models = [name for name in results.keys() if 'stage' in name]
+    # # Check if we have a curriculum model in results
+    # curriculum_models = [name for name in results.keys() if 'stage' in name]
     
-    for model_name in curriculum_models:
-        stage_results = []
-        model_path = models_to_evaluate[model_name]  # Get the correct path from our main dictionary
+    # for model_name in curriculum_models:
+    #     stage_results = []
+    #     model_path = models_to_evaluate[model_name]  # Get the correct path from our main dictionary
         
-        for stage in stages:
-            stage_data = evaluate_model(
-                model_path,  # Use the correct path for this model
-                num_episodes=20,  # Fewer episodes for faster evaluation
-                stage=stage
-            )
-            if stage_data:
-                stage_results.append(stage_data['success_rate'])
+    #     for stage in stages:
+    #         stage_data = evaluate_model(
+    #             model_path,  # Use the correct path for this model
+    #             num_episodes=20,  # Fewer episodes for faster evaluation
+    #             stage=stage
+    #         )
+    #         if stage_data:
+    #             stage_results.append(stage_data['success_rate'])
         
-        if stage_results:  # Only plot if we got data
-            plt.plot(stages, stage_results, marker='o', 
-                    label=model_name.replace('ppo_lunar_lander_', ''))
+    #     if stage_results:  # Only plot if we got data
+    #         plt.plot(stages, stage_results, marker='o', 
+    #                 label=model_name.replace('ppo_lunar_lander_', ''))
     
-    if curriculum_models:  # Only add decoration if we plotted curriculum data
-        plt.xlabel('Curriculum Stage')
-        plt.ylabel('Success Rate (%)')
-        plt.title(f'Curriculum Progression {title_suffix}')
-        plt.ylim(0, 100)
-        plt.legend()
-        plt.grid()
-    else:
-        plt.axis('off')  # Hide the subplot if no curriculum models
+    # if curriculum_models:  # Only add decoration if we plotted curriculum data
+    #     plt.xlabel('Curriculum Stage')
+    #     plt.ylabel('Success Rate (%)')
+    #     plt.title(f'Curriculum Progression {title_suffix}')
+    #     plt.ylim(0, 100)
+    #     plt.legend()
+    #     plt.grid()
+    # else:
+    #     plt.axis('off')  # Hide the subplot if no curriculum models
     
     plt.tight_layout()
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
